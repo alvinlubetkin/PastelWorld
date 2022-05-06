@@ -139,7 +139,7 @@ describe("ONFT", function () {
     })
 
     it("test setFeeCollector() and getFeeCollector()", async function () {
-        expect(await onft_Fuji.feeCollectorAddress()).to.be.equal("0xE22FD0840d127E44557D5E19A0A9a52EAfc3e297")
+        expect(await onft_Fuji.feeCollectorAddress()).to.be.equal(DEPLOY_ARGS.feeCollectorAddress)
         await onft_Fuji.setFeeCollector(ethers.constants.AddressZero)
         expect(await onft_Fuji.feeCollectorAddress()).to.be.equal(ethers.constants.AddressZero)
     })
@@ -207,7 +207,14 @@ describe("ONFT", function () {
         expect(updatedChainId).to.be.equal(newChainId)
     })
 
-    it("test setChainId() should update chainId", async () => {
+    it("test setChainId() should revert without admin role", async () => {
+        const nonAdmin = (await ethers.getSigners())[9]
+        const newChainId = 3
+        const tokenId = 0
+        await expect(onft_Mumbai.connect(nonAdmin).setChainId(tokenId, newChainId)).to.be.revertedWith("Must have admin role.")
+    })
+
+    it("test setChainIds() should update chainId for array of tokenIds", async () => {
         const newChainIds = []
         const tokenIds = []
         for (let i = 0; i < 50; i++) {
@@ -220,14 +227,8 @@ describe("ONFT", function () {
             expect(updatedChainId).to.be.equal(newChainIds[i])
         }
     })
-    it("test setChainId() should revert without admin role", async () => {
-        const nonAdmin = (await ethers.getSigners())[9]
-        const newChainId = 3
-        const tokenId = 0
-        await expect(onft_Mumbai.connect(nonAdmin).setChainId(tokenId, newChainId)).to.be.revertedWith("Must have admin role.")
-    })
 
-    it("test setChainId() should revert without admin role", async () => {
+    it("test setChainIds() should revert without admin role", async () => {
         const nonAdmin = (await ethers.getSigners())[9]
         const newChainIds = []
         const tokenIds = []

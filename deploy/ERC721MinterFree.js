@@ -1,17 +1,13 @@
-const whitelistRinkeby = require("../whitelists/rinkebyWhitelist.json")
-const whitelistMain = require("../whitelists/testWhitelist.json")
-
 module.exports = async function ({ deployments, getNamedAccounts, ethers }) {
     const { deploy, read, execute } = deployments
     const { deployer } = await getNamedAccounts()
     console.log(`>>> your address: ${deployer}`)
 
     const onft = await deployments.get("ONFT")
-    const wl = hre.network.name == "mainnet" ? whitelistMain.whitelist : whitelistRinkeby.whitelist
 
-    const minter = await deploy("ERC721MinterSimple", {
+    const minter = await deploy("ERC721MinterFree", {
         from: deployer,
-        args: [onft.address, ethers.utils.parseUnits("88", "15"), 2],
+        args: [onft.address],
         log: true,
         waitConfirmations: 1,
     })
@@ -20,5 +16,5 @@ module.exports = async function ({ deployments, getNamedAccounts, ethers }) {
     await execute("ONFT", { from: deployer, log: true }, "grantRole", role, minter.address)
 }
 
-module.exports.tags = ["ERC721MinterSimple"]
+module.exports.tags = ["ERC721MinterFree"]
 module.exports.dependencies = ["ONFT"]

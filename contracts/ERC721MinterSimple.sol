@@ -4,20 +4,25 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 abstract contract IERC721 {
     function mint(address to) external virtual;
+
+    function ownerOf(uint tokenId) external view virtual returns (address);
 }
 
 contract ERC721MinterSimple is Ownable {
     IERC721 public erc721;
+    IERC721 public krewPass;
 
     //used to verify whitelist user
     uint public mintQuantity;
     uint public price;
     address public devPayoutAddress;
     mapping(address => uint) public claimed;
+    mapping(uint => bool) krewPassClaimed;
     mapping(address => bool) public whitelisted;
 
-    constructor(IERC721 erc721_, uint price_, uint mintQuantity_) {
+    constructor(IERC721 erc721_, IERC721 krewPass_, uint price_, uint mintQuantity_) {
         erc721 = erc721_;
+        krewPass = krewPass_;
         mintQuantity = mintQuantity_;
         price = price_;
         devPayoutAddress = address(0xc891a8B00b0Ea012eD2B56767896CCf83C4A61DD);
@@ -52,6 +57,19 @@ contract ERC721MinterSimple is Ownable {
         for (uint i = 0; i < quantity_; i++) {
             erc721.mint(msg.sender);
         }
+    }
+
+    function mintKrewPass(uint tokenId) public payable {
+        require(msg.value >= price, "Insufficient funds provided.");
+
+        //requires that user is in whitelsit
+        require(krewPass.ownerOf(tokenId) == msg.sender, "Address not whitelisted.");
+
+        require(!krewPassClaimed[tokenId], "Already claimed.");
+        //increase quantity that user has claimed
+        krewPassClaimed[tokenId] = true;
+
+        erc721.mint(msg.sender);
     }
 
     function addToWhitelist(address[] memory _whitelist) public onlyOwner {

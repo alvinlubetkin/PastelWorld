@@ -2,19 +2,25 @@ const { expect } = require("chai")
 const { ethers, deployments, getUnnamedAccounts } = require("hardhat")
 const { buildMerkleTree, buildProof } = require("../utils/merkle")
 const whitelist = require("../whitelists/testWhitelist.json")
+const ERC721 = require("@openzeppelin/contracts/build/contracts/ERC721PresetMinterPauserAutoId.json")
 
 describe("MinterSimple", function () {
     let minter
     let deployer
     let nft
+    let krewPass
 
     const testFixture = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }) => {
         const { deployer } = await getNamedAccounts()
         await deployments.fixture("ONFT")
         const nft = await deployments.get("ONFT")
+
+        const KrewPass = await ethers.getContractFactory(ERC721.abi, ERC721.bytecode)
+        const krewPass = await KrewPass.deploy("Krew Pass", "KP", "https://")
+        await krewPass.deployed()
         const minter = await deployments.deploy("ERC721MinterSimple", {
             from: deployer,
-            args: [nft.address, ethers.utils.parseUnits("1", 15), 3],
+            args: [nft.address, krewPass.address, ethers.utils.parseUnits("1", 15), 3],
         })
 
         const nftInstance = await ethers.getContractAt(nft.abi, nft.address, deployer)
@@ -34,12 +40,15 @@ describe("MinterSimple", function () {
             deployerAccount: deployer,
             minterJSON: minter,
             nftJSON: nft,
+            pass: krewPass,
         }
     })
+
     beforeEach("reset global vals", async () => {
-        const { minterJSON, nftJSON, deployerAccount } = await testFixture()
+        const { minterJSON, nftJSON, deployerAccount, pass } = await testFixture()
         minter = await ethers.getContractAt(minterJSON.abi, minterJSON.address, deployer)
         nft = await ethers.getContractAt(nftJSON.abi, nftJSON.address, deployer)
+        krewPass = pass
         deployer = deployerAccount
     })
 
@@ -135,5 +144,43 @@ describe("MinterSimple", function () {
     it("test addToWhitelist() should revert without admin role", async () => {
         const nonAdmin = (await ethers.getSigners())[9]
         await expect(minter.connect(nonAdmin).addToWhitelist([nonAdmin.address])).to.be.revertedWith("Ownable: caller is not the owner")
+    })
+
+    it("test mintKrewPass() should mint 1 per pass", async () => {
+        const [owner, holder1, holder2, nonHolder] = await ethers.getSigners()
+        //mint to holders
+        await krewPass.connect(owner).mint(holder1.address)
+        await krewPass.connect(owner).mint(holder2.address)
+
+        let mint = await minter.connect(holder1).mintKrewPass(0, { value: ethers.utils.parseUnits("1", 15) })
+        let receipt = await ethers.provider.waitForTransaction(mint.hash)
+        expect(receipt.logs.length).to.be.equal(1, "minting failed")
+        mint = await minter.connect(holder2).mintKrewPass(1, { value: ethers.utils.parseUnits("1", 15) })
+        receipt = await ethers.provider.waitForTransaction(mint.hash)
+        expect(receipt.logs.length).to.be.equal(1, "minting failed")
+    })
+
+    it("test mintKrewPass() should revert with insufficient funds", async () => {
+        const [owner, holder1, holder2, nonHolder] = await ethers.getSigners()
+        //mint to holders
+        await krewPass.connect(owner).mint(holder1.address)
+        await krewPass.connect(owner).mint(holder2.address)
+
+        await expect(minter.connect(holder1).mintKrewPass(0, { value: ethers.utils.parseUnits("0.99", 15) })).to.be.reverted
+        await expect(minter.connect(holder2).mintKrewPass(1, { value: ethers.utils.parseUnits("0.99", 15) })).to.be.reverted
+    })
+
+    it("test mintKrewPass() should revert if not holding krew pass", async () => {
+        const [owner, holder1, holder2, nonHolder] = await ethers.getSigners()
+        //mint to holders
+        await krewPass.connect(owner).mint(holder1.address)
+        await krewPass.connect(owner).mint(holder2.address)
+
+        await expect(minter.connect(nonHolder).mintKrewPass(0, { value: ethers.utils.parseUnits("1", 15) })).to.be.revertedWith(
+            "Address not whitelisted."
+        )
+        await expect(minter.connect(holder1).mintKrewPass(1, { value: ethers.utils.parseUnits("1", 15) })).to.be.revertedWith(
+            "Address not whitelisted."
+        )
     })
 })

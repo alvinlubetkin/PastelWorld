@@ -3,6 +3,8 @@ const ONFT_ARGS = require("../constants/onftTokenRanges.json")
 module.exports = async function ({ deployments, getNamedAccounts }) {
     const { deploy } = deployments
     const { deployer } = await getNamedAccounts()
+    // let gasPrice
+    // if (hre.network.name == "rinkeby") gasPrice = ethers.utils.parseUnits("10", "gwei")
     const deployLog = () => {
         console.log(`>>> your address: ${deployer}`)
         console.log(`hre.network.name: ${hre.network.name}`)

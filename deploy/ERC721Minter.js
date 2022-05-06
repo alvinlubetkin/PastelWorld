@@ -1,6 +1,7 @@
 const LZ_ADDRESS = require("../constants/lzEndpoints.json")
 const whitelistRinkeby = require("../whitelists/rinkebyWhitelist.json")
-const whitelistMain = require("../whitelists/testWhitelist.json")
+// const whitelistMain = require("../whitelists/mainWhitelist.json")
+const whitelistTest = require("../whitelists/testWhitelist.json")
 const { buildMerkleTree } = require("../utils/merkle")
 
 module.exports = async function ({ deployments, getNamedAccounts, ethers }) {
@@ -9,8 +10,13 @@ module.exports = async function ({ deployments, getNamedAccounts, ethers }) {
     console.log(`>>> your address: ${deployer}`)
 
     const onft = await deployments.get("ONFT")
-    const wl = hre.network.name == "mainnet" ? whitelistMain.whitelist : whitelistRinkeby.whitelist
-    const tree = buildMerkleTree(whitelist.whitelist)
+    const wl =
+        hre.network.name == "mainnet"
+            ? whitelistMain.whitelist
+            : hre.network.name == "hardhat"
+            ? whitelistTest.whitelist
+            : whitelistRinkeby.whitelist
+    const tree = buildMerkleTree(wl)
     const root = tree.getRoot()
 
     const minter = await deploy("ERC721Minter", {

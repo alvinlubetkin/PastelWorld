@@ -42,6 +42,10 @@ contract ONFT is ONFT721, Pausable, ReentrancyGuard {
         _mint(to, currentMintId++);
     }
 
+    function mintHonorary(address to, uint tokenId) external onlyMinter {
+        _mint(to, tokenId);
+    }
+
     function _beforeSend(address, uint16, bytes memory, uint _tokenId) internal override whenNotPaused {
         _burn(_tokenId);
     }
