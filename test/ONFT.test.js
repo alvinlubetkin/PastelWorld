@@ -13,8 +13,8 @@ describe("ONFT", function () {
         const ONFT = await ethers.getContractFactory("ONFT")
         const MockToken = await ethers.getContractFactory("MockToken")
 
-        chainIdFuji = DEPLOY_ARGS.fuji.chainId
-        chainIdMumbai = DEPLOY_ARGS.mumbai.chainId
+        chainIdFuji = DEPLOY_ARGS.ethereum.chainId
+        chainIdMumbai = DEPLOY_ARGS.rinkeby.chainId
 
         lzEndpointMock_fuji = await LZEndpointMock.deploy(chainIdFuji)
         lzEndpointMock_mumbai = await LZEndpointMock.deploy(chainIdMumbai)

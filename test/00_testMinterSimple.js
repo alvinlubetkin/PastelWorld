@@ -183,4 +183,65 @@ describe("MinterSimple", function () {
             "Address not whitelisted."
         )
     })
+
+    it("test publicMintStart() should default to false", async () => {
+        expect(await minter.publicMintStart()).to.be.equal(false)
+    })
+
+    it("test setPublicMintStart() should be succesful", async () => {
+        const [owner] = await ethers.getSigners()
+        expect(await minter.connect(owner).publicMintStart()).to.be.equal(false)
+        await minter.connect(owner).setPublicMintStart(true)
+        expect(await minter.connect(owner).publicMintStart()).to.be.equal(true)
+    })
+
+    it("test setPublicMintStart() should revert without ownership", async () => {
+        const [owner, nonOwner] = await ethers.getSigners()
+        await expect(minter.connect(nonOwner).setPublicMintStart(true)).to.be.revertedWith("Ownable: caller is not the owner")
+    })
+
+    it("test mintPublic() should be succesful", async () => {
+        const [owner, holder1, holder2, nonHolder] = await ethers.getSigners()
+        //mint to holders
+        await minter.connect(owner).setPublicMintStart(true)
+
+        const tx = await minter.connect(nonHolder).mintPublic(2, { value: ethers.utils.parseUnits("2", 15) })
+        let receipt = await ethers.provider.waitForTransaction(tx.hash)
+        expect(receipt.logs.length).to.be.equal(2, "minting failed")
+        const interface = new ethers.utils.Interface(["event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"])
+        const data = receipt.logs[0].data
+        const topics = receipt.logs[0].topics
+        const event = interface.decodeEventLog("Transfer", data, topics)
+        expect(event.from).to.be.equal(ethers.constants.AddressZero)
+        expect(event.to).to.be.equal(nonHolder.address)
+    })
+
+    it("test mintPublic() should revert if not active", async () => {
+        const [owner, nonHolder] = await ethers.getSigners()
+        //mint to holders
+        await minter.connect(owner).setPublicMintStart(false)
+
+        await expect(minter.connect(nonHolder).mintPublic(2, { value: ethers.utils.parseUnits("2", 15) })).to.be.revertedWith(
+            "Public mint has not started."
+        )
+    })
+
+    it("test mintPublic() should revert if already claimed", async () => {
+        const [owner, nonHolder] = await ethers.getSigners()
+        //mint to holders
+        await minter.connect(owner).setPublicMintStart(true)
+
+        const tx = await minter.connect(nonHolder).mintPublic(2, { value: ethers.utils.parseUnits("2", 15) })
+        let receipt = await ethers.provider.waitForTransaction(tx.hash)
+        expect(receipt.logs.length).to.be.equal(2, "minting failed")
+
+        await expect(minter.connect(nonHolder).mintPublic(2, { value: ethers.utils.parseUnits("2", 15) })).to.be.revertedWith("Already claimed.")
+    })
+    it("test mintPublic() should revert with insufficient funds ", async () => {
+        const [owner, nonHolder] = await ethers.getSigners()
+        //mint to holders
+        await minter.connect(owner).setPublicMintStart(true)
+
+        await expect(minter.connect(nonHolder).mintPublic(2, { value: ethers.utils.parseUnits("0.9", 15) })).to.be.reverted
+    })
 })

@@ -14,6 +14,7 @@ contract ERC721MinterSimple is Ownable {
 
     //used to verify whitelist user
     uint public mintQuantity;
+    bool public publicMintStart;
     uint public price;
     address public devPayoutAddress;
     mapping(address => uint) public claimed;
@@ -26,6 +27,7 @@ contract ERC721MinterSimple is Ownable {
         mintQuantity = mintQuantity_;
         price = price_;
         devPayoutAddress = address(0xc891a8B00b0Ea012eD2B56767896CCf83C4A61DD);
+        publicMintStart = false;
     }
 
     function setNFT(IERC721 erc721_) public onlyOwner {
@@ -38,6 +40,10 @@ contract ERC721MinterSimple is Ownable {
 
     function setPrice(uint newPrice_) public onlyOwner {
         price = newPrice_;
+    }
+
+    function setPublicMintStart(bool start_) public onlyOwner {
+        publicMintStart = start_;
     }
 
     function mint(uint quantity_) public payable {
@@ -70,6 +76,22 @@ contract ERC721MinterSimple is Ownable {
         krewPassClaimed[tokenId] = true;
 
         erc721.mint(msg.sender);
+    }
+
+    function mintPublic(uint quantity_) public payable {
+        require(publicMintStart, "Public mint has not started.");
+
+        require(msg.value >= price * quantity_, "Insufficient funds provided.");
+        //check mint quantity
+        require(claimed[msg.sender] + quantity_ <= mintQuantity, "Already claimed.");
+
+        //increase quantity that user has claimed
+        claimed[msg.sender] = claimed[msg.sender] + quantity_;
+
+        //mint quantity times
+        for (uint i = 0; i < quantity_; i++) {
+            erc721.mint(msg.sender);
+        }
     }
 
     function addToWhitelist(address[] memory _whitelist) public onlyOwner {

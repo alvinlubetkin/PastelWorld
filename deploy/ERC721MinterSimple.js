@@ -8,7 +8,7 @@ module.exports = async function ({ deployments, getNamedAccounts, ethers }) {
 
     const minter = await deploy("ERC721MinterSimple", {
         from: deployer,
-        args: [onft.address, CONFIG[hre.network.name].krewPass, ethers.utils.parseUnits("88", "15"), 2],
+        args: [onft.address, CONFIG[hre.network.name].krewPass, ethers.utils.parseUnits(CONFIG[hre.network.name].price, 18), CONFIG.maxQuantity],
         log: true,
         waitConfirmations: 1,
     })
